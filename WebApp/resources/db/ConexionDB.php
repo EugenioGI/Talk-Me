@@ -2,37 +2,52 @@
 
 require __DIR__ . '/../../vendor/autoload.php';
 
-$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../../');
-$dotenv->load();
+// Intentar cargar .env solo si existe (en Render no es necesario porque usamos Environment Variables)
+if (file_exists(__DIR__ . '/../../.env')) {
+    $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../../');
+    $dotenv->load();
+}
 
 class Conexion {
     private $dbh;
-    private static $instancia; //The single instance
-    private $host = 'mysql'; //nombre del servicio en compose.yml
-    private $usuario = 'root';
-    //~ private $password = $_ENV['DB_PASSWORD'];; // initialization must be a constant value.
+    private static $instancia;
+    
+    // Estos valores ahora se llenan desde Render o el .env
+    private $host;
+    private $usuario;
     private $password;
-    private $nombreBaseDatos = 'aumentativePage';
+    private $nombreBaseDatos;
+    private $port;
 
-    /*
-    Get an instance of the Database
-    @return Instance
-     */
     public static function getInstancia() {
-        if (!self::$instancia) { // singleton
+        if (!self::$instancia) {
             self::$instancia = new self();
         }
         return self::$instancia;
     }
 
-    // Constructor
     private function __construct() {
-        $this->password = $_ENV['DB_PASSWORD'];
+        // getenv busca las variables que pusiste en las "cajitas" de Render
+        $this->host = getenv('DB_HOST') ?: 'localhost';
+        $this->usuario = getenv('DB_USER') ?: 'root';
+        $this->password = getenv('DB_PASSWORD') ?: '';
+        $this->nombreBaseDatos = getenv('DB_NAME') ?: 'aumentativePage';
+        $this->port = getenv('DB_PORT') ?: '3306';
+
         try {
-            $this->dbh = new PDO("mysql:host=" . $this->host . ";dbname=" . $this->nombreBaseDatos, $this->usuario, $this->password);
-            $this->dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            // Aiven requiere SSL. Añadimos las opciones al PDO
+            $options = [
+                PDO::MYSQL_ATTR_SSL_CA => NULL, // Esto activa el SSL básico
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+            ];
+
+            $dsn = "mysql:host=" . $this->host . ";port=" . $this->port . ";dbname=" . $this->nombreBaseDatos;
+            
+            $this->dbh = new PDO($dsn, $this->usuario, $this->password, $options);
+            
         } catch (PDOException $e) {
-            echo $e->getMessage();
+            // En producción es mejor no mostrar el mensaje directo, pero para debug está bien
+            echo "Error de conexión: " . $e->getMessage();
         }
     }
 
