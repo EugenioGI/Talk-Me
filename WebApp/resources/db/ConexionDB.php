@@ -2,7 +2,7 @@
 
 require __DIR__ . '/../../vendor/autoload.php';
 
-// Intentar cargar .env solo si existe (en Render no es necesario porque usamos Environment Variables)
+// Cargar .env solo si existe localmente
 if (file_exists(__DIR__ . '/../../.env')) {
     $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../../');
     $dotenv->load();
@@ -12,7 +12,6 @@ class Conexion {
     private $dbh;
     private static $instancia;
     
-    // Estos valores ahora se llenan desde Render o el .env
     private $host;
     private $usuario;
     private $password;
@@ -27,7 +26,7 @@ class Conexion {
     }
 
     private function __construct() {
-        // getenv busca las variables que pusiste en las "cajitas" de Render
+        // getenv() es más seguro para leer las variables de Render
         $this->host = getenv('DB_HOST') ?: 'localhost';
         $this->usuario = getenv('DB_USER') ?: 'root';
         $this->password = getenv('DB_PASSWORD') ?: '';
@@ -35,19 +34,20 @@ class Conexion {
         $this->port = getenv('DB_PORT') ?: '3306';
 
         try {
-            // Aiven requiere SSL. Añadimos las opciones al PDO
+            // El DSN correcto para forzar conexión por red (TCP)
+            $dsn = "mysql:host={$this->host};port={$this->port};dbname={$this->nombreBaseDatos};charset=utf8mb4";
+            
             $options = [
-                PDO::MYSQL_ATTR_SSL_CA => NULL, // Esto activa el SSL básico
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+                PDO::MYSQL_ATTR_SSL_CA => NULL, // Necesario para Aiven
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
             ];
 
-            $dsn = "mysql:host=" . $this->host . ";port=" . $this->port . ";dbname=" . $this->nombreBaseDatos;
-            
             $this->dbh = new PDO($dsn, $this->usuario, $this->password, $options);
             
         } catch (PDOException $e) {
-            // En producción es mejor no mostrar el mensaje directo, pero para debug está bien
-            echo "Error de conexión: " . $e->getMessage();
+            // Esto nos dirá si el error ahora es de "Access Denied" o de Red
+            die("Error de conexión: " . $e->getMessage());
         }
     }
 
