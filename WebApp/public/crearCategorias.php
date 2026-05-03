@@ -1,6 +1,5 @@
 <?php
-
-require_once 'middleware/admin_only.php';
+require_once 'middleware/user_only.php';
 include_once("/var/www/html/resources/templates/head.html");
 include_once("/var/www/html/resources/templates/header.html");
 include_once("/var/www/html/resources/db/PictogramasDB.php");
