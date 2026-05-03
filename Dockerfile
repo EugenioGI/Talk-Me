@@ -1,20 +1,32 @@
-# Usamos PHP 8.3 con Apache incluido (esto reemplaza tus dos imágenes)
+# Usamos PHP con Apache
 FROM php:8.3-apache-bookworm
 
-# 1. Actualizamos e instalamos las extensiones que tenías en tu archivo de PHP
-RUN apt update && apt upgrade -y
-RUN docker-php-ext-install mysqli pdo_mysql
+# 1. Instalamos dependencias del sistema y extensiones de PHP
+RUN apt update && apt upgrade -y && apt install -y \
+    unzip \
+    libzip-dev \
+    && docker-php-ext-install mysqli pdo_mysql zip
 
-# 2. Habilitamos mod_rewrite (casi siempre necesario en PHP/Apache)
+# 2. Instalamos Composer globalmente
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+# 3. Habilitamos mod_rewrite
 RUN a2enmod rewrite
 
-# 3. Copiamos tu código
-# Según tu imagen anterior, el index.php está en WebApp/public
-# Si quieres que la URL sea directa, copiamos el contenido de public
-COPY ./WebApp/public/ /var/www/html/
+# 4. Copiamos los archivos de Composer primero para aprovechar la caché de Docker
+WORKDIR /var/www/html
+COPY ./WebApp/composer.* ./
 
-# 4. Ajustamos permisos
+# 5. Instalamos las dependencias de PHP (sin scripts para evitar errores)
+RUN composer install --no-dev --no-scripts --no-autoloader
+
+# 6. Copiamos TODO el código de tu WebApp
+COPY ./WebApp/ /var/www/html/
+
+# 7. Generamos el autoloader final
+RUN composer dump-autoload --optimize
+
+# 8. Permisos para Apache
 RUN chown -R www-data:www-data /var/www/html
 
-# 5. Render usa el puerto 80 por defecto
 EXPOSE 80
