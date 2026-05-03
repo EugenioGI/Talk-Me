@@ -1,0 +1,58 @@
+services:
+
+  php:
+    build: './php/'
+    networks:
+      - backend
+    volumes:
+      - ./webApp/:/var/www/html/
+
+  apache:
+    build: './apache/'
+    networks:
+      - frontend
+      - backend
+    ports:
+      - "8080:80"
+    volumes:
+      - ./webApp/:/var/www/html/
+    depends_on:
+      - php
+      
+  mysql:
+    image: mysql:8.0
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - backend
+    ports:
+      - "3306:3306"
+    secrets:
+      - db_root_password
+    environment:
+      - MYSQL_ROOT_PASSWORD_FILE=/run/secrets/db_root_password
+      # - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_TCP_PORT=3306
+      - MYSQL_DATABASE=aumentativePage
+      
+  composer:
+    image: composer:2.8
+    # Solo usamos 'update' para que cree el archivo .lock por primera vez
+    command: ["composer", "update"] 
+    volumes:
+      - ./webApp/:/var/www/html
+    depends_on:
+      - apache
+    working_dir: /var/www/html/
+
+      
+networks:
+  frontend:
+  backend:
+  
+volumes:
+  db_data:
+  
+secrets:
+  db_root_password:
+    file: ./secrets/db_root_password.txt
