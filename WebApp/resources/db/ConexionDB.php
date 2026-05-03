@@ -34,11 +34,12 @@ class Conexion {
         $this->port = getenv('DB_PORT') ?: '3306';
 
         try {
-            // El DSN correcto para forzar conexión por red (TCP)
             $dsn = "mysql:host={$this->host};port={$this->port};dbname={$this->nombreBaseDatos};charset=utf8mb4";
             
             $options = [
-                PDO::MYSQL_ATTR_SSL_CA => NULL, // Necesario para Aiven
+                // CAMBIO AQUÍ: Desactivamos la verificación estricta del certificado 
+                // para que nos deje entrar sin el archivo .pem
+                PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => false,
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
             ];
@@ -46,7 +47,6 @@ class Conexion {
             $this->dbh = new PDO($dsn, $this->usuario, $this->password, $options);
             
         } catch (PDOException $e) {
-            // Esto nos dirá si el error ahora es de "Access Denied" o de Red
             die("Error de conexión: " . $e->getMessage());
         }
     }
