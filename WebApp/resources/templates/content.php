@@ -60,7 +60,7 @@ foreach ($categorias as $cat) {
         <div class="container-fluid">
             <div class="d-sm-flex align-items-center justify-content-between mb-4">
                 <h1 class="h3 mb-0 text-gray-800">Dashboard de Pictogramas</h1>
-                <a href="/public/reporteGenerar.php" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+                <a href="reporteGenerar.php" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
                     <i class="fas fa-download fa-sm text-white-50"></i> Generar Reporte
                 </a>
             </div>
